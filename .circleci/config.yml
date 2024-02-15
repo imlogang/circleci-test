@@ -1,0 +1,46 @@
+version: 2.1
+
+jobs:
+  build:
+    macos:
+      xcode: 15.2.0
+    resource_class: macos.m1.medium.gen1
+    steps:
+      - checkout
+      - run:
+          name: build_and_test
+          command: |
+            xcodebuild -project CircleCITest/CircleCITest.xcodeproj \
+              -scheme CircleCITest \
+              -sdk iphonesimulator \
+              -derivedDataPath ".build" \
+              -destination "platform=iOS Simulator,OS=17.2,name=iPhone SE (3rd generation)" \
+              test
+      - run:
+          name: Zip test results
+          command: |
+            find .build -iname "*.xcresult" -exec zip -qr ./test.xcresult.zip {} \;
+          when: always
+      - store_artifacts:
+          path: test.xcresult.zip
+      - store_artifacts:
+          path: ~/Library/Logs/DiagnosticReports
+      - store_artifacts:
+          path: ~/Library/Logs/CoreSimulator
+      - store_artifacts:
+          path: ~/Library/Logs/CrashReporter
+
+workflows:
+  version: 2.1
+  pull-request:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: master
+  master:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
